@@ -46,6 +46,30 @@ app.use((req, res, next) => {
   next();
 });
 
+// Keep-alive ping function
+function startKeepAlivePing() {
+  const PING_URL = "https://jewellerycenter.ru";
+  const PING_INTERVAL = 8 * 60 * 1000; // 8 minutes in milliseconds
+
+  setInterval(async () => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await fetch(PING_URL, { 
+        method: "HEAD",
+        signal: controller.signal 
+      });
+      clearTimeout(timeoutId);
+      log(`[PING] ${PING_URL} - Status: ${response.status}`);
+    } catch (error) {
+      log(`[PING ERROR] ${PING_URL} - ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }, PING_INTERVAL);
+
+  log(`[KEEP-ALIVE] Started pinging ${PING_URL} every 8 minutes`);
+}
+
 (async () => {
   const server = await registerRoutes(app);
 
@@ -77,5 +101,7 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    // Start keep-alive ping after server starts
+    startKeepAlivePing();
   });
 })();
